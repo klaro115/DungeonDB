@@ -12,6 +12,7 @@ public class UiPane : MonoBehaviour
 	public UiPane[] neighbors = null;
 	public RectTransform contentParent = null;
 	public GameObject reopenControl = null;
+	public UiMouseDragHandler dragResizer = null;
 
 	public bool startOpen = true;
 
@@ -21,6 +22,7 @@ public class UiPane : MonoBehaviour
 	public UiScalingRole scalingRole = UiScalingRole.LeftMaster;
 	public bool retainLastScaleAsDefault = false;
 	public float defaultScale = 300.0f;
+	private float sizePreResize = 300.0f;
 
 	private static Vector3[] worldCorners = new Vector3[4];
 
@@ -37,6 +39,8 @@ public class UiPane : MonoBehaviour
 	{
 		if (contentParent == null) contentParent = transform as RectTransform;
 		if (retainLastScaleAsDefault && IsActive) defaultScale = Size;
+
+		sizePreResize = GetCurrentSize(transform as RectTransform);
 
 		if (startOpen) Open();
 		else Close();
@@ -74,6 +78,12 @@ public class UiPane : MonoBehaviour
 		}
 		rect.anchorMin = anchorMin;
 		rect.anchorMax = anchorMax;
+	}
+	private bool CanPaneResize()
+	{
+		return scalingRole != UiScalingRole.CenterSlave &&
+			scalingMode != UiScalingMode.AdjustAnchors &&
+			scalingMode != UiScalingMode.Fixed;
 	}
 
 	public void Resize(float newMasterSize, UiScalingCoordinator scalingCoordinator, float prevMasterSize = 0.0f)
@@ -188,6 +198,25 @@ public class UiPane : MonoBehaviour
 				break;
 		}
 		if (opened && reopenControl != null) reopenControl.SetActive(false);
+	}
+
+	public void ResizingStart()
+	{
+		if (!CanPaneResize()) return;
+
+		sizePreResize = GetCurrentSize(transform as RectTransform);
+	}
+	public void ResizingUpdate()
+	{
+		if (!CanPaneResize() || dragResizer == null) return;
+
+		bool isHorizontal = orientation == UiOrientation.Horizontal;
+		Vector2 dragOffset = dragResizer.CurrentDragOffset;
+		float sizeOffset = isHorizontal ? dragOffset.x : dragOffset.y;
+		if (scalingRole == UiScalingRole.RightMaster && isHorizontal) sizeOffset *= -1.0f;
+		else if (scalingRole == UiScalingRole.LeftMaster && !isHorizontal) sizeOffset *= -1.0f;
+		float newSize = sizePreResize + sizeOffset;
+		Resize(newSize, UiScalingCoordinator.Command);
 	}
 
 	#endregion
