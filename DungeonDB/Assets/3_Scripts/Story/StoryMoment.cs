@@ -14,6 +14,7 @@ public class StoryMoment
 	public string locationName = string.Empty;
 	[NonSerialized]
 	public Location location = null;
+	[UiControlLevelSpec(UiControlLevel.Normal)]
 	public DateTime time = new DateTime();
 
 	#endregion

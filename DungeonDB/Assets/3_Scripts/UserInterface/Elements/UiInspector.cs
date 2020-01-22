@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]
@@ -16,11 +17,15 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 		{
 			fieldInfo = _fieldInfo;
 			propInfo = null;
+			UiControlLevelSpec levelSpec = fieldInfo?.GetCustomAttribute<UiControlLevelSpec>();
+			controlLevel = levelSpec != null ? levelSpec.levels : UiControlLevel.Any;
 		}
 		public TargetControl(PropertyInfo _propInfo)
 		{
 			fieldInfo = null;
 			propInfo = _propInfo;
+			UiControlLevelSpec levelSpec = propInfo?.GetCustomAttribute<UiControlLevelSpec>();
+			controlLevel = levelSpec != null ? levelSpec.levels : UiControlLevel.Any;
 		}
 
 		#endregion
@@ -29,6 +34,7 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 		public UiControl control = null;
 		public readonly FieldInfo fieldInfo = null;
 		public readonly PropertyInfo propInfo = null;
+		public readonly UiControlLevel controlLevel = UiControlLevel.Any;
 
 		public bool IsField => fieldInfo != null;
 		public bool IsProperty => fieldInfo == null && propInfo != null;
@@ -70,13 +76,61 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 		#endregion
 	}
 
+	public enum TargetTypes
+	{
+		Custom,
+
+		Scalar,
+		Text,
+		Vectors,
+		Color,
+		DateTime,
+	}
+
+	[Serializable]
+	public class ControlPrefab
+	{
+		public ControlPrefab(TargetTypes _targetTypes, UiControl _prefab = null, Type _type = null, UiControlLevel _controlLevel = UiControlLevel.Any)
+		{
+			targetTypes = _targetTypes;
+			controlLevel = _controlLevel;
+			typeName = string.Empty;
+			prefab = _prefab;
+			type = _type;
+		}
+		public ControlPrefab(string _typeName, UiControl _prefab = null, Type _type = null, UiControlLevel _controlLevel = UiControlLevel.Any)
+		{
+			targetTypes = TargetTypes.Custom;
+			controlLevel = _controlLevel;
+			typeName = _typeName;
+			prefab = _prefab;
+			type = _type;
+		}
+
+		public TargetTypes targetTypes = TargetTypes.Custom;
+		public UiControlLevel controlLevel = UiControlLevel.Any;
+		public string typeName = string.Empty;
+		public UiControl prefab = null;
+		public Type type = null;
+	}
+
 	#endregion
 	#region Fields
 
 	private object target = null;
 	private Type targetType = null;
 
+	public RectTransform controlParent = null;
 	private List<TargetControl> controls = null;
+
+	public ControlPrefab[] prefabs = new ControlPrefab[]
+	{
+		new ControlPrefab(TargetTypes.Scalar),
+		new ControlPrefab(TargetTypes.Text),
+		new ControlPrefab(TargetTypes.Vectors),
+		new ControlPrefab(TargetTypes.Color),
+		new ControlPrefab(TargetTypes.DateTime),
+	};
 
 	#endregion
 	#region Properties
@@ -90,8 +144,37 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 
 	void Start()
     {
+		if (controlParent == null) controlParent = transform as RectTransform;
+
+		// Fetch types by name right away and only once:
+		if (prefabs != null && prefabs.Length != 0)
+		{
+			Assembly assembly = Assembly.GetCallingAssembly();
+			foreach (ControlPrefab cp in prefabs)
+			{
+				if (cp.targetTypes == TargetTypes.Custom && cp.type == null)
+				{
+					cp.type = assembly.GetType(cp.typeName, false, true);
+				}
+			}
+		}
+
 		// Set the initial target to null:
 		SetTarget(null);
+
+		//TEST
+		SetTarget(new StoryEvent()
+		{
+			name = "Birthday",
+			description = "It's always somebody's birthday somewhere on this planet.",
+			locationName = "Right here",
+			startTime = new DateTime(2020, 2, 15),
+			endTime = new DateTime(2020, 2, 16),
+			timeline = new List<StoryMoment>(new StoryMoment[1]
+			{
+				new StoryMoment() { name = "Partyyyyyy", locationName = "Everywhere", time = new DateTime(2020, 2, 15, 22, 0, 0) }
+			})
+		});
     }
 
 	public bool SetTarget(object newTarget)
@@ -148,7 +231,7 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 		if (target == null || targetType == null) return;
 
 		// Gather all public fields:
-		FieldInfo[] fields = targetType.GetFields(BindingFlags.Public);
+		FieldInfo[] fields = targetType.GetFields();
 		if (fields != null)
 		{
 			foreach (FieldInfo field in fields)
@@ -157,7 +240,7 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 			}
 		}
 		// Gather all public getter-setter properties:
-		PropertyInfo[] properties = targetType.GetProperties(BindingFlags.Public);
+		PropertyInfo[] properties = targetType.GetProperties();
 		if (fields != null)
 		{
 			foreach (PropertyInfo prop in properties)
@@ -174,16 +257,61 @@ public class UiInspector : MonoBehaviour, IUiControlHost
 		{
 			if (!tc.GetType(out Type tcType)) continue;
 
-			if (TypeTools.IsIntegerType(tcType) || TypeTools.IsFloatType(tcType))
+			// Using the control's type, find the right control for this type:
+			UiControl prefab = GetControlPrefabForType(tcType, tc.controlLevel);
+			if (prefab != null)
 			{
-				tc.control = new UiControlNumber();
-				(tc.control as UiControlNumber).SetDataTypeFromSystemType(tcType);
+				// Instantiate the control's prefab:
+				GameObject newControlGO = Instantiate<GameObject>(prefab.gameObject, controlParent);
+				tc.control = newControlGO.GetComponent<UiControl>();
+				tc.control.controlName = tc.Name;
+
+				// Do some type-specific initialization:
+				if (tc.control is UiControlNumber cn) cn.SetDataTypeFromSystemType(tcType);
+				//...
 			}
-			// TODO: add further types here.
+			else Debug.Log($"[UiInspector] Warning: No prefab found for control '{tc.Name}' of type '{tcType}'!");
+			// ^Note: The actual value and contents of the control will be set later, no need to do that here.
 		}
 
 		// Not that all controls are in place, display the target's attributes/values:
 		UpdateContents();
+	}
+
+	private UiControl GetControlPrefabForType(Type type, UiControlLevel requestedLevel)
+	{
+		if (type == null || prefabs == null) return null;
+
+		// Select a target depending on the given type:
+		TargetTypes target = TargetTypes.Custom;
+		if (TypeTools.IsScalarType(type)) target = TargetTypes.Scalar;
+		else if (TypeTools.IsTextType(type)) target = TargetTypes.Text;
+		else if (TypeTools.IsVectorType(type, out int dims)) target = TargetTypes.Vectors;
+		else if (TypeTools.IsColorType(type)) target = TargetTypes.Color;
+		else if (type == typeof(DateTime)) target = TargetTypes.DateTime;
+		//...
+
+		// Search our prefab array for a fitting target/type match:
+		UiControl prefab = null;
+		foreach (ControlPrefab cp in prefabs)
+		{
+			if (cp.targetTypes == target)
+			{
+				bool isCompatible = false;
+				if (target != TargetTypes.Custom) isCompatible = true;
+				else
+				{
+					if (cp.type != null && cp.type == type) isCompatible = true;
+					else if (cp.type == null && string.Compare(cp.typeName, type.Name, StringComparison.InvariantCultureIgnoreCase) == 0) isCompatible = true;
+				}
+				if (isCompatible)
+				{
+					prefab = cp.prefab;
+					if ((requestedLevel & cp.controlLevel) != 0) break;
+				}
+			}
+		}
+		return prefab;
 	}
 
 	public void UpdateContents()

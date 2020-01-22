@@ -17,7 +17,9 @@ public class StoryLine
 	public List<string> eventNames = new List<string>();
 	[NonSerialized]
 	public List<StoryEvent> events = null;
+	[UiControlLevelSpec(UiControlLevel.Rough)]
 	public DateTime startTime = new DateTime();
+	[UiControlLevelSpec(UiControlLevel.Rough)]
 	public DateTime endTime = new DateTime();
 
 	#endregion

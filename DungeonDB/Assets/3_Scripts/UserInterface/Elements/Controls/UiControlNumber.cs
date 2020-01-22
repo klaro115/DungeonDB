@@ -29,6 +29,7 @@ public class UiControlNumber : UiControl
 	#endregion
 	#region Properties
 
+	public double Value { get => value; set => SetValue((object)value); }
 	public override Type ValueType => valueType;
 	public DataType NumberType { get => numberType; set => SetDataType(value); }
 
@@ -45,7 +46,7 @@ public class UiControlNumber : UiControl
 	public bool SetDataTypeFromSystemType(Type type)
 	{
 		if (type == null) return false;
-		if (!TypeTools.IsIntegerType(type) && !TypeTools.IsFloatType(type)) return false;
+		if (!TypeTools.IsScalarType(type)) return false;
 
 		valueType = type;
 		if (type == typeof(byte)) numberType = DataType.Byte;
@@ -85,7 +86,6 @@ public class UiControlNumber : UiControl
 
 	public override bool SetValue<T>(T newValue)
 	{
-		Type type = typeof(T);
 		if (newValue is byte b) value = b;
 		else if (newValue is short s) value = s;
 		else if (newValue is int i) value = i;
@@ -115,6 +115,18 @@ public class UiControlNumber : UiControl
 		}
 		return true;
 	}
+	protected override bool SetValue_internal(object newValue)
+	{
+		if (newValue == null) return false;
+
+		rawValue = newValue;
+		if (TypeTools.IsScalarType(newValue.GetType()))
+		{
+			value = (double)newValue;
+			return true;
+		}
+		return false;
+	}
 
 	public override void UpdateContents()
 	{
@@ -140,6 +152,14 @@ public class UiControlNumber : UiControl
 					break;
 			}
 			uiField.text = value.ToString();
+		}
+	}
+
+	public void CallbackValueChanged(double newValue)
+	{
+		if (SetValue(newValue))
+		{
+			if (host != null) host.NotifyControlChanged(this);
 		}
 	}
 	

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,11 +7,13 @@ public abstract class UiControl : MonoBehaviour
 {
 	#region Fields
 
-	private object rawValue = null;
+	protected object rawValue = null;
 
 	public string controlName = string.Empty;
 	public IUiControlHost host = null;
 	public Text uiLabel = null;
+
+	protected static StringBuilder labelBuilder = null;
 
 	#endregion
 	#region Properties
@@ -79,7 +82,30 @@ public abstract class UiControl : MonoBehaviour
 
 	public virtual void UpdateLabelContents()
 	{
-		if (uiLabel != null) uiLabel.text = controlName ?? "null";
+		if (uiLabel != null)
+		{
+			if (labelBuilder == null) labelBuilder = new StringBuilder(128);
+			else labelBuilder.Clear();
+
+			string rawTxt = controlName ?? "???";
+			bool prevCharWasLower = false;
+			bool isFirstChar = true;
+			foreach (char c in rawTxt)
+			{
+				// Separate words based on camelCase upper-to-lower changes:
+				bool isUpper = char.IsUpper(c);
+				if (isUpper && prevCharWasLower) labelBuilder.Append(' ');
+				// Capitalize the first character if it is a letter:
+				if (isFirstChar && char.IsLetter(c))
+					labelBuilder.Append(char.ToUpper(c));
+				else
+					labelBuilder.Append(c);
+				// Reset camelCase flag:
+				prevCharWasLower = !isUpper;
+				isFirstChar = false;
+			}
+			uiLabel.text = labelBuilder.ToString();
+		}
 	}
 
 	#endregion

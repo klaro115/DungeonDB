@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections;
 using System.Text;
-using System.Threading.Tasks;
+using UnityEngine;
 
 public static class TypeTools
 {
@@ -21,8 +20,74 @@ public static class TypeTools
 	}
 	public static bool IsFloatType(Type type)
 	{
+		return type != null && (type == typeof(float) || type == typeof(double));
+	}
+	public static bool IsScalarType(Type type)
+	{
+		return IsIntegerType(type) || IsFloatType(type);
+	}
+
+	public static bool IsVectorType(Type type, out int outDimensions)
+	{
+		outDimensions = 0;
 		if (type == null) return false;
-		return type == typeof(float) || type == typeof(double);
+
+		if (type == typeof(Vector2) || type == typeof(Vector2Int)) outDimensions = 2;
+		else if (type == typeof(Vector3) || type == typeof(Vector3Int)) outDimensions = 3;
+		else if (type == typeof(Vector4)) outDimensions = 4;
+
+		return outDimensions > 1;
+	}
+
+	public static bool IsTextType(Type type)
+	{
+		return type != null && (type == typeof(string) || type == typeof(StringBuilder));
+	}
+
+	public static bool IsColorType(Type type)
+	{
+		return type != null && (type == typeof(Color) || type == typeof(Color32));
+	}
+
+	public static int[] GetTypeDimensions(Type type)
+	{
+		if (type == null) return null;
+
+		if (type == typeof(Vector2) || type == typeof(Vector2Int)) return new int[1] { 1 };
+		if (type == typeof(Vector3) || type == typeof(Vector3Int)) return new int[2] { 1, 1 };
+		if (type == typeof(Vector4)) return new int[3] { 1, 1, 1 };
+		if (type == typeof(Matrix4x4)) return new int[4] { 4, 4, 4, 4 };
+		if (typeof(IEnumerable).IsAssignableFrom(type))
+		{
+			return new int[1] { -1 };
+		}
+
+		return new int[1] { 1 };
+	}
+	public static int[] GetObjectDimensions(object obj)
+	{
+		if (obj == null) return null;
+
+		Type type = obj.GetType();
+		int[] dimensions = GetTypeDimensions(type);
+		if (dimensions == null) return null;
+		if (dimensions.Length > 1 || dimensions[0] >= 0) return dimensions;
+
+		if (obj is string txt) dimensions[0] = txt.Length;
+		else if (obj is StringBuilder builder) dimensions[0] = builder.Length;
+		else if (obj is Array a)
+		{
+			dimensions = new int[a.Rank];
+			for (int i = 0; i < dimensions.Length; ++i) dimensions[i] = a.GetUpperBound(i) + 1;
+		}
+		else if (obj is ICollection coll) dimensions[0] = coll.Count;
+		else if (obj is IEnumerable ie)
+		{
+			int counter = 0;
+			foreach (IEnumerator i in ie) counter++;
+			dimensions[0] = counter;
+		}
+		return dimensions;
 	}
 
 	#endregion

@@ -1,22 +1,24 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 [RequireComponent(typeof(RectTransform))]
 public class UiPane : MonoBehaviour
 {
 	#region Fields
 
+	[Header("Structure:")]
 	public UiPane parent = null;
-	public UiPane[] neighbors = null;
 	public RectTransform contentParent = null;
-	public GameObject reopenControl = null;
-	public UiMouseDragHandler dragResizer = null;
 
+	[Header("Opening & Closing:")]
+	public GameObject reopenControl = null;
+	public UiPaneClosingMode closingMode = UiPaneClosingMode.None;
 	public bool startOpen = true;
 
-	public UiPaneClosingMode closingMode = UiPaneClosingMode.None;
+	[Header("Layout & Resizing:")]
+	public UiPane[] neighbors = null;
+	public UiMouseDragHandler dragResizer = null;
 	public UiOrientation orientation = UiOrientation.Vertical;
 	public UiScalingMode scalingMode = UiScalingMode.Fixed;
 	public UiScalingRole scalingRole = UiScalingRole.LeftMaster;
@@ -24,7 +26,7 @@ public class UiPane : MonoBehaviour
 	public float defaultScale = 300.0f;
 	private float sizePreResize = 300.0f;
 
-	private static Vector3[] worldCorners = new Vector3[4];
+	private static readonly Vector3[] worldCorners = new Vector3[4];
 
 	#endregion
 	#region Properties
