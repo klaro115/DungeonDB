@@ -515,7 +515,7 @@ PrefabInstance:
     - target: {fileID: 3675766149532943390, guid: 5afd06258ff249648812a560d52dd588,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000115553754
+      value: 0.000044735232
       objectReference: {fileID: 0}
     - target: {fileID: 3675766150817196692, guid: 5afd06258ff249648812a560d52dd588,
         type: 3}
@@ -540,6 +540,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: UiWorkspace
+      objectReference: {fileID: 0}
+    - target: {fileID: 2875641362153059178, guid: 874c2515fbb0170408cf8f4fa24ff33a,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2875641362153059179, guid: 874c2515fbb0170408cf8f4fa24ff33a,
         type: 3}

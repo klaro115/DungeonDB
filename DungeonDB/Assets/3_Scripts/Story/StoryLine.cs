@@ -17,9 +17,9 @@ public class StoryLine
 	public List<string> eventNames = new List<string>();
 	[NonSerialized]
 	public List<StoryEvent> events = null;
-	[UiControlLevelSpec(UiControlLevel.Rough)]
+	[UiControlLevelSpec(UiControlLevel.Broad)]
 	public DateTime startTime = new DateTime();
-	[UiControlLevelSpec(UiControlLevel.Rough)]
+	[UiControlLevelSpec(UiControlLevel.Broad)]
 	public DateTime endTime = new DateTime();
 
 	#endregion
@@ -79,6 +79,11 @@ public class StoryLine
 			if (se.FindMoment(momentName, out outMoment)) return true;
 		}
 		return false;
+	}
+
+	public override string ToString()
+	{
+		return $"{name} ({startTime.ToShortDateString()}-{endTime.ToShortDateString()})";
 	}
 
 	#endregion

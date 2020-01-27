@@ -7,7 +7,7 @@ public class UiControlTime : UiControl
 {
 	#region Fields
 
-	private DateTime value = new DateTime();
+	private DateTime value = DateTime.Now;
 
 	public Text labelDate = null;
 
@@ -38,26 +38,17 @@ public class UiControlTime : UiControl
 			}
 		}
 
-		SetValue_internal(DateTime.Now);
-
 		base.Start();
 	}
 
-	public override bool SetValue<T>(T newValue)
+	public override bool SetValue(object newValue)
 	{
-		if (typeof(T) != ValueType) return false;
-
-		return SetValue((object)newValue);
-	}
-
-	protected override bool SetValue_internal(object newValue)
-	{
-		if (newValue == null) return false;
-
-		if (newValue is DateTime dt)
+		if (newValue != null && newValue is DateTime dt)
 		{
 			value = dt;
 			rawValue = newValue;
+
+			UpdateContents();
 			return true;
 		}
 		return false;
@@ -90,45 +81,50 @@ public class UiControlTime : UiControl
 		}
 	}
 
+	private void SetValue_callback(DateTime newValue)
+	{
+		if (SetValue(newValue) && host != null) host.NotifyControlChanged(this);
+	}
+
 	public void CallbackHourChanged()
 	{
 		int newHour = Mathf.Clamp(ParseStringToInt(inputHour?.text), 0, 23);
 		DateTime newValue = new DateTime(value.Year, value.Month, value.Day, newHour, value.Minute, value.Second, value.Millisecond, value.Kind);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackMinuteChanged()
 	{
 		int newMinute = Mathf.Clamp(ParseStringToInt(inputMinute?.text), 0, 59);
 		DateTime newValue = new DateTime(value.Year, value.Month, value.Day, value.Hour, newMinute, value.Second, value.Millisecond, value.Kind);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackSecondChanged()
 	{
 		int newSecond = Mathf.Clamp(ParseStringToInt(inputSecond?.text), 0, 59);
 		DateTime newValue = new DateTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, newSecond, value.Millisecond, value.Kind);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackMilliSecondChanged()
 	{
 		int newMilliSecond = Mathf.Clamp(ParseStringToInt(inputMilliSecond?.text), 0, 999);
 		DateTime newValue = new DateTime(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, newMilliSecond, value.Kind);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 
 	public void CallbackIncrementDay(int direction)
 	{
 		DateTime newValue = value.AddDays(direction);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackIncrementMonth(int direction)
 	{
 		DateTime newValue = value.AddMonths(direction);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackIncrementYear(int direction)
 	{
 		DateTime newValue = value.AddYears(direction);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 
 	#endregion

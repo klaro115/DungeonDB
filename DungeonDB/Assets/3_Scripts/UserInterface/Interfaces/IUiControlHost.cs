@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 public interface IUiControlHost
 {
 	#region Methods
+
+	object ControlTarget { get; }
+	Type ControlTargetType { get; }
 
 	bool NotifyControlChanged(UiControl control);
 

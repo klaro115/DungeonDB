@@ -22,14 +22,17 @@ public class Location
 	[Header("Connections:")]
 	public string parentName = string.Empty;
 	[NonSerialized]
+	[UiControlLevelSpec(UiControlLevel.Any, UiControlContentBinding.LoadFromDatabase, "parentName")]
 	public Location parent = null;
 	public List<string> connectedLocationNames = new List<string>();
 	[NonSerialized]
+	[UiControlLevelSpec(UiControlLevel.DontShow)]
 	public List<Location> connectedLocations = null;
 
 	[Header("Story:")]
 	public List<string> eventNames = new List<string>();
 	[NonSerialized]
+	[UiControlLevelSpec(UiControlLevel.DontShow)]
 	public List<StoryEvent> events = null;
 
 	#endregion

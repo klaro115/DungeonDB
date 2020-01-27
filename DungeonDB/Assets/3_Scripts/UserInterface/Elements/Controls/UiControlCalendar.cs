@@ -6,7 +6,7 @@ public class UiControlCalendar : UiControl
 {
 	#region Fields
 
-	private DateTime value = new DateTime();
+	private DateTime value = DateTime.Now;
 
 	public Text labelMonth = null;
 	public Text labelYear = null;
@@ -59,26 +59,17 @@ public class UiControlCalendar : UiControl
 			}
 		}
 
-		SetValue_internal(DateTime.Now);
-
 		base.Start();
 	}
-
-	public override bool SetValue<T>(T newValue)
+	
+	public override bool SetValue(object newValue)
 	{
-		if (typeof(T) != ValueType) return false;
-
-		return SetValue((object)newValue);
-	}
-
-	protected override bool SetValue_internal(object newValue)
-	{
-		if (newValue == null) return false;
-
-		if (newValue is DateTime dt)
+		if (newValue != null && newValue is DateTime dt)
 		{
 			value = dt;
 			rawValue = dt;
+
+			UpdateContents();
 			return true;
 		}
 		return false;
@@ -130,16 +121,21 @@ public class UiControlCalendar : UiControl
 		if (labelMonth != null) labelMonth.text = monthNames?[value.Month - 1] ?? string.Empty;
 		if (labelYear != null) labelYear.text = value.Year.ToString();
 	}
-	
+
+	private void SetValue_callback(DateTime newValue)
+	{
+		if (SetValue(newValue) && host != null) host.NotifyControlChanged(this);
+	}
+
 	public void CallbackIncrementMonth(int direction)
 	{
 		DateTime newValue = value.AddMonths(direction);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackIncrementYear(int direction)
 	{
 		DateTime newValue = value.AddYears(direction);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 	public void CallbackSelectGridDate(int gridIndex)
 	{
@@ -150,7 +146,7 @@ public class UiControlCalendar : UiControl
 		int weekDayIndexValue = ((int)value.DayOfWeek + 6) % 7;
 		int gridDayOfMonth = gridIndex - weekDayIndexFirst + 1;
 		DateTime newValue = new DateTime(value.Year, value.Month, gridDayOfMonth, value.Hour, value.Minute, value.Second, value.Millisecond, value.Kind);
-		SetValue(newValue);
+		SetValue_callback(newValue);
 	}
 
 	#endregion

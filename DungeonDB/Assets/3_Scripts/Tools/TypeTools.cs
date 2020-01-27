@@ -1,10 +1,16 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
 public static class TypeTools
 {
+	#region Fields
+
+	private static StringBuilder textBuilder = null;
+
+	#endregion
 	#region Methods
 
 	public static bool IsIntegerType(Type type)
@@ -41,12 +47,18 @@ public static class TypeTools
 
 	public static bool IsTextType(Type type)
 	{
-		return type != null && (type == typeof(string) || type == typeof(StringBuilder));
+		return type != null && (type == typeof(string) || type == typeof(StringBuilder) || ImplementsInterface(type, typeof(ICollection<char>)));
 	}
 
 	public static bool IsColorType(Type type)
 	{
 		return type != null && (type == typeof(Color) || type == typeof(Color32));
+	}
+
+	public static bool ImplementsInterface(Type type, Type interfaceType)
+	{
+		if (type == null || interfaceType == null) return false;
+		return type == interfaceType || interfaceType.IsAssignableFrom(type);
 	}
 
 	public static int[] GetTypeDimensions(Type type)
@@ -88,6 +100,26 @@ public static class TypeTools
 			dimensions[0] = counter;
 		}
 		return dimensions;
+	}
+
+	public static bool GetTextTypeToString(object obj, out string outTxt)
+	{
+		outTxt = null;
+		if (obj == null) return false;
+
+		if (obj is string objTxt) outTxt = objTxt;
+		else if (obj is StringBuilder builder) outTxt = builder.ToString();
+		else if (obj.GetType().IsAssignableFrom(typeof(ICollection<char>)))
+		{
+			ICollection<char> coll = (ICollection<char>)obj;
+			if (textBuilder == null) textBuilder = new StringBuilder(coll.Count);
+			else textBuilder.Clear();
+			foreach (char c in coll)
+				textBuilder.Append(c);
+			outTxt = textBuilder.ToString();
+		}
+		else return false;
+		return true;
 	}
 
 	#endregion

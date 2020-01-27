@@ -83,22 +83,7 @@ public class UiControlNumber : UiControl
 				break;
 		}
 	}
-
-	public override bool SetValue<T>(T newValue)
-	{
-		if (newValue is byte b) value = b;
-		else if (newValue is short s) value = s;
-		else if (newValue is int i) value = i;
-		else if (newValue is long l) value = l;
-		else if (newValue is float f) value = f;
-		else if (newValue is double d) value = d;
-		else
-		{
-			Debug.LogError($"Error! Value of control '{controlName}' must be a scalar of integer or floating point type! (signed 8,16,32,64 bit types only)");
-			return false;
-		}
-		return SetValue((object)value);
-	}
+	
 	public bool GetValue<T>(out object outValue) where T : struct
 	{
 		Type type = typeof(T);
@@ -115,14 +100,14 @@ public class UiControlNumber : UiControl
 		}
 		return true;
 	}
-	protected override bool SetValue_internal(object newValue)
+	public override bool SetValue(object newValue)
 	{
-		if (newValue == null) return false;
-
-		rawValue = newValue;
-		if (TypeTools.IsScalarType(newValue.GetType()))
+		if (newValue != null && TypeTools.IsScalarType(newValue.GetType()))
 		{
+			rawValue = newValue;
 			value = (double)newValue;
+
+			UpdateContents();
 			return true;
 		}
 		return false;
@@ -157,10 +142,7 @@ public class UiControlNumber : UiControl
 
 	public void CallbackValueChanged(double newValue)
 	{
-		if (SetValue(newValue))
-		{
-			if (host != null) host.NotifyControlChanged(this);
-		}
+		if (SetValue(newValue) && host != null) host.NotifyControlChanged(this);
 	}
 	
 	#endregion

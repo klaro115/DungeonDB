@@ -13,6 +13,7 @@ public class StoryMoment
 	[Header("Coordinates:")]
 	public string locationName = string.Empty;
 	[NonSerialized]
+	[UiControlLevelSpec(UiControlLevel.Any, UiControlContentBinding.LoadFromDatabase, "locationName")]
 	public Location location = null;
 	[UiControlLevelSpec(UiControlLevel.Normal)]
 	public DateTime time = new DateTime();
@@ -28,6 +29,11 @@ public class StoryMoment
 	public void DelayMoment(TimeSpan delay)
 	{
 		time += delay;
+	}
+
+	public override string ToString()
+	{
+		return $"{name ?? string.Empty} ({time.ToShortTimeString()})";
 	}
 
 	#endregion

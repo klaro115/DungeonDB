@@ -1663,7 +1663,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 22}
+  m_SizeDelta: {x: 0, y: 38}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &9005303356156346469
 MonoBehaviour:
@@ -1678,6 +1678,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controlName: '[Time]'
+  controlLevel: 2
   uiLabel: {fileID: 9005303356481079374}
   labelDate: {fileID: 1293578789}
   inputHour: {fileID: 9005303355275036823}

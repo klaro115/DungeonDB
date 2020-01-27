@@ -10,10 +10,13 @@ public abstract class UiControl : MonoBehaviour
 	protected object rawValue = null;
 
 	public string controlName = string.Empty;
-	public IUiControlHost host = null;
+	public UiControlLevel controlLevel = UiControlLevel.Normal;
+	public IUiInspector host = null;
 	public Text uiLabel = null;
 
 	protected static StringBuilder labelBuilder = null;
+
+	protected static readonly Vector3[] screenCorners = new Vector3[4];
 
 	#endregion
 	#region Properties
@@ -31,26 +34,15 @@ public abstract class UiControl : MonoBehaviour
 		UpdateContents();
 	}
 
-	public bool IsValueTypeComptible(Type other)
+	public virtual bool IsValueTypeComptible(Type other)
 	{
 		Type valueType = ValueType;
+		if (valueType == null) return false;
 		if (valueType.IsValueType && other == null) return false;
 		return other == valueType || other.IsSubclassOf(valueType);
 	}
 
-	public virtual bool SetValue<T>(T newValue)
-	{
-		// Verify type compatibility:
-		if (!IsValueTypeComptible(typeof(T)))
-		{
-			Debug.LogError($"Error! Invalid type for new value of control '{controlName}': {typeof(T)} vs. {ValueType}");
-			return false;
-		}
-
-		// Use the default setter; override if you need special behaviour:
-		return SetValue((object)newValue);
-	}
-	public bool SetValue(object newValue)
+	public virtual bool SetValue(object newValue)
 	{
 		// Verify type compatibility:
 		Type newValueType = newValue?.GetType();
@@ -61,20 +53,10 @@ public abstract class UiControl : MonoBehaviour
 		}
 
 		// Set the new value:
-		if (!SetValue_internal(newValue))
-		{
-			Debug.LogError($"Error! Could not set value in control '{controlName}': {newValue} ({ValueType})");
-			return false;
-		}
+		rawValue = newValue;
 
 		// Update representation on UI elements:
 		UpdateContents();
-		return true;
-	}
-	protected virtual bool SetValue_internal(object newValue)
-	{
-		// NOTE: Remember to override this to store the value in the control's actual native/represented data type!
-		rawValue = newValue;
 		return true;
 	}
 
@@ -84,28 +66,43 @@ public abstract class UiControl : MonoBehaviour
 	{
 		if (uiLabel != null)
 		{
-			if (labelBuilder == null) labelBuilder = new StringBuilder(128);
-			else labelBuilder.Clear();
-
-			string rawTxt = controlName ?? "???";
-			bool prevCharWasLower = false;
-			bool isFirstChar = true;
-			foreach (char c in rawTxt)
-			{
-				// Separate words based on camelCase upper-to-lower changes:
-				bool isUpper = char.IsUpper(c);
-				if (isUpper && prevCharWasLower) labelBuilder.Append(' ');
-				// Capitalize the first character if it is a letter:
-				if (isFirstChar && char.IsLetter(c))
-					labelBuilder.Append(char.ToUpper(c));
-				else
-					labelBuilder.Append(c);
-				// Reset camelCase flag:
-				prevCharWasLower = !isUpper;
-				isFirstChar = false;
-			}
+			FormatLabelText(controlName);
 			uiLabel.text = labelBuilder.ToString();
 		}
+	}
+
+	public static StringBuilder FormatLabelText(string name)
+	{
+		if (labelBuilder == null) labelBuilder = new StringBuilder(128);
+		else labelBuilder.Clear();
+
+		string rawTxt = name ?? "???";
+		bool prevCharWasLower = false;
+		bool isFirstChar = true;
+		foreach (char c in rawTxt)
+		{
+			// Separate words based on camelCase upper-to-lower changes:
+			bool isUpper = char.IsUpper(c);
+			bool isLetter = char.IsLetter(c);
+			if (isUpper && prevCharWasLower) labelBuilder.Append(' ');
+			// Capitalize the first character if it is a letter:
+			if (isFirstChar && isLetter)
+				labelBuilder.Append(char.ToUpper(c));
+			else
+				labelBuilder.Append(c);
+			// Reset camelCase flag:
+			prevCharWasLower = !isUpper && isLetter;
+			isFirstChar = false;
+		}
+		return labelBuilder;
+	}
+
+	public virtual float CalculateControlHeight()
+	{
+		RectTransform rect = transform as RectTransform;
+		rect.GetLocalCorners(screenCorners);
+		float height = Mathf.Abs(screenCorners[2].y - screenCorners[0].y);
+		return height;
 	}
 
 	#endregion

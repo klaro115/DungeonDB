@@ -10,15 +10,20 @@ public class StoryEvent
 	[Header("Descriptives:")]
 	public string name = "new Event";
 	public string tags = string.Empty;
+	[UiControlLevelSpec(UiControlLevel.Broad)]
 	public string description = string.Empty;
+	[UiControlLevelSpec(UiControlLevel.Normal)]
 	public string trivia = string.Empty;
 	public List<string> relatedContentNames = new List<string>();
 
 	[Header("Coordinates:")]
 	public string locationName = string.Empty;
 	[NonSerialized]
+	[UiControlLevelSpec(UiControlLevel.Any, UiControlContentBinding.LoadFromDatabase, "locationName")]
 	public Location location = null;
+	[UiControlLevelSpec(UiControlLevel.Normal)]
 	public DateTime startTime = new DateTime();
+	[UiControlLevelSpec(UiControlLevel.Normal)]
 	public DateTime endTime = new DateTime();
 	public List<StoryMoment> timeline = new List<StoryMoment>();
 
@@ -89,6 +94,11 @@ public class StoryEvent
 
 		outMoment = timeline.Find(o => string.Compare(momentName, o.name, StringComparison.InvariantCultureIgnoreCase) == 0);
 		return outMoment != null;
+	}
+
+	public override string ToString()
+	{
+		return $"{name ?? string.Empty} ({startTime.ToShortDateString()})";
 	}
 
 	#endregion
