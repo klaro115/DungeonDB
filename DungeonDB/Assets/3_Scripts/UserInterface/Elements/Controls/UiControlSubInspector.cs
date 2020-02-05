@@ -8,6 +8,11 @@ public class UiControlSubInspector : UiControl, IUiInspector
 {
 	#region Fields
 
+	public bool allowCollapseLists = true;
+	public bool allowCollapseNested = true;
+	private bool isCollapsed = false;
+	public bool startCollapsed = true;
+
 	private UiInspector rootHost = null;
 	private UiInspectorMode mode = UiInspectorMode.IList;
 
@@ -16,9 +21,14 @@ public class UiControlSubInspector : UiControl, IUiInspector
 
 	public RectTransform contentParent = null;
 	private List<UiInspector.TargetControl> controls = null;
+	public Button buttonCollapse = null;
+	private Text buttonCollapseTxt = null;
+	private Color buttonCollapseColorNormal = new Color(1, 1, 1, 1);
+	public Color buttonCollapseColorActive = new Color(1, 0.65f, 0, 1);
 
 	private float baseHeight = 0.0f;
 	private float extraHeightPerCtrl = 0.0f;
+	public float baseHeightExtra = 10.0f;
 
 	#endregion
 	#region Properties
@@ -42,6 +52,12 @@ public class UiControlSubInspector : UiControl, IUiInspector
 	{
 		if (uiLabel == null) uiLabel = GetComponentInChildren<Text>();
 		if (contentParent == null) contentParent = transform as RectTransform;
+		if (buttonCollapse == null) buttonCollapse = GetComponentInChildren<Button>(false);
+		if (buttonCollapse != null)
+		{
+			buttonCollapseColorNormal = buttonCollapse.image.color;
+			buttonCollapseTxt = buttonCollapse.GetComponentInChildren<Text>();
+		}
 
 		// Gather some height and layouting values:
 		VerticalLayoutGroup verticalLayout = contentParent.GetComponent<VerticalLayoutGroup>();
@@ -52,6 +68,8 @@ public class UiControlSubInspector : UiControl, IUiInspector
 		}
 
 		base.Start();
+
+		if (startCollapsed) SetCollapsed(true);
 	}
 
 	public bool Initialize(UiInspector _rootHost, IUiInspector _host, object _hostTarget, UiInspector.TargetControl _control)
@@ -61,6 +79,7 @@ public class UiControlSubInspector : UiControl, IUiInspector
 		// Set host hierarchy references:
 		rootHost = _rootHost;
 		host = _host;
+		//if (host == this) Debug.Log("WTF???");
 		controlName = _control?.Name ?? "???";
 
 		// Get the value of the host's control, which will serve as this control's target:
@@ -111,8 +130,6 @@ public class UiControlSubInspector : UiControl, IUiInspector
 	{
 		UpdateLabelContents();
 
-		Debug.Log($"TEST: Updating contents for sub inspector '{controlName}'");
-
 		// Have the controls rebuilt if either they haven't been initialized or the represented list's element count changed:
 		if (controls == null || (mode == UiInspectorMode.IList && controls.Count != ListElementCount))
 		{
@@ -126,6 +143,13 @@ public class UiControlSubInspector : UiControl, IUiInspector
 		float totalHeight = CalculateControlHeight();
 		RectTransform rect = transform as RectTransform;
 		rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, totalHeight);
+
+		// Hide the collapse button if we're in a mode that does not allow it:
+		if (buttonCollapse != null)
+		{
+			if ((mode == UiInspectorMode.IList && !allowCollapseLists) || (mode == UiInspectorMode.NestedElement && !allowCollapseNested))
+				buttonCollapse.gameObject.SetActive(false);
+		}
 	}
 
 	public bool NotifyControlChanged(UiControl control)
@@ -133,27 +157,36 @@ public class UiControlSubInspector : UiControl, IUiInspector
 		if (control == null || controls == null) return false;
 
 		UiInspector.TargetControl tc = controls.Find(o => o.control == control);
-		if (tc == null) return false;
+		if (tc == null)
+		{
+			Debug.LogError($"[UiControlSubInspector] Error! Subinspector '{controlName}' with target '{target}' of type '{targetType}' does not contain control '{control.controlName}'!");
+			return false;
+		}
 
 		// Try setting the property/field values on target after reading it from UI control:
+		bool success = false;
 		try
 		{
-			if (!tc.SetValue(target, control.RawValue)) return false;
+			success = tc.SetValue(target, control.RawValue);
+			if (success && tc.IsContentBindingSource)
+			{
+				UiInspector.LoadContentBindingValues(this, tc, null);
+			}
 		}
 		catch (Exception ex)
 		{
-			Debug.LogError($"ERROR! An exception was caught while trying to set a control's value to target member!\nException message: {ex.Message}");
+			Debug.LogError($"[UiControlSubInspector] ERROR! An exception was caught while trying to set a control's value to target member!\nException message: {ex.Message}");
 			return false;
 		}
 
 		// Notify the host that this list or nested object has been changed:
-		return host != null ? host.NotifyControlChanged(this) : true;
+		return success && host != null ? host.NotifyControlChanged(this) : success;
 	}
 
 	public override float CalculateControlHeight()
 	{
-		float totalHeight = baseHeight;
-		if (controls != null)
+		float totalHeight = baseHeight + baseHeightExtra;
+		if (controls != null && !isCollapsed)
 		{
 			foreach (UiInspector.TargetControl tc in controls)
 			{
@@ -164,7 +197,49 @@ public class UiControlSubInspector : UiControl, IUiInspector
 				}
 			}
 		}
+		testLastTotalHeight = totalHeight;
 		return totalHeight;
+	}
+
+	public bool SetCollapsed(bool toggle)
+	{
+		// Only react to collapsing when in a mode that allows it:
+		if ((mode == UiInspectorMode.IList && allowCollapseLists) ||
+			(mode == UiInspectorMode.NestedElement && allowCollapseNested))
+		{
+			// Set the new state:
+			isCollapsed = toggle;
+
+			// Hide contents and update collapsing controls:
+			if (contentParent != null && contentParent != transform)
+				contentParent.gameObject.SetActive(!isCollapsed);
+			if (buttonCollapse != null)
+			{
+				buttonCollapse.image.color = isCollapsed ? buttonCollapseColorActive : buttonCollapseColorNormal;
+				if (buttonCollapseTxt != null) buttonCollapseTxt.text = isCollapsed ? "+" : "-";
+			}
+		}
+
+		// Update the control's physical height to encompass all child controls:
+		float totalHeight = CalculateControlHeight();
+		RectTransform rect = transform as RectTransform;
+		rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, totalHeight);
+
+		// Force a layout rebuild by turning the game object off and on again:
+		gameObject.SetActive(false);
+		gameObject.SetActive(true);
+		// ^Note: Seriously, why is there no easy and reliable way of doing this? This works but is highly janky and likely redoes the layouting twice...
+
+		// Notify other subinspectors up the hierarchy to fix their layout as well:
+		if (host != null && host is UiControlSubInspector hostSI) hostSI.SetCollapsed(hostSI.isCollapsed);
+
+		// Return success:
+		return true;
+	}
+
+	public void CallbackCollapseControl()
+	{
+		SetCollapsed(!isCollapsed);
 	}
 
 	#endregion

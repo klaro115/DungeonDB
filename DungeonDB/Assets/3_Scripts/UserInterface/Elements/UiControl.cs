@@ -18,6 +18,9 @@ public abstract class UiControl : MonoBehaviour
 
 	protected static readonly Vector3[] screenCorners = new Vector3[4];
 
+	//TEST
+	public float testLastTotalHeight = 0.0f;
+
 	#endregion
 	#region Properties
 
@@ -102,6 +105,7 @@ public abstract class UiControl : MonoBehaviour
 		RectTransform rect = transform as RectTransform;
 		rect.GetLocalCorners(screenCorners);
 		float height = Mathf.Abs(screenCorners[2].y - screenCorners[0].y);
+		testLastTotalHeight = height;
 		return height;
 	}
 
