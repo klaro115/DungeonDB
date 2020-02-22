@@ -1,6 +1,10 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
+
+using Projects;
 
 namespace Content
 {
@@ -65,11 +69,11 @@ namespace Content
 			return filePath.Substring(extIndex);
 		}
 
-		public static bool LoadContent(ContentReference contentRef, out ContentHandle outHandle)
+		private static bool VerifyContentReference(ContentReference contentRef, out FileFormat outFileFormat)
 		{
-			outHandle = null;
+			outFileFormat = FileFormat.None;
 			if (contentRef == null) return false;
-
+			
 			// Verify the content's file path:
 			if (string.IsNullOrWhiteSpace(contentRef.sourcePath))
 			{
@@ -83,15 +87,42 @@ namespace Content
 				Debug.LogError($"[ContentFileLoader] Error! Source path URI of content '{contentRef}' has no file extension, cannot determine type!\nPath: {contentRef.sourcePath}");
 				return false;
 			}
-			FileFormat sourceFileFormat = FileFormat.None;
 			foreach (FileFormatId fileExt in fileExtensions)
 			{
 				if (string.CompareOrdinal(fileExt.extension, sourcePathExtension) == 0)
 				{
-					sourceFileFormat = fileExt.format;
+					outFileFormat = fileExt.format;
 					break;
 				}
 			}
+			return true;
+		}
+
+		public static string CreateSourcePath(ContentHandle handle)
+		{
+			if (handle == null || !handle.IsValid())
+			{
+				Debug.LogError("[ContentFileLoader] Error! Cannot create file source path from null or invalid content handle!");
+				return string.Empty;
+			}
+
+			string rootPath = ProjectManager.ActiveProject?.rootPath ?? string.Empty;
+			string subPath = ContentHelper.GetContentCategorySubPath(handle.category);
+			string contentDirectory = Path.Combine(rootPath, subPath);
+
+			FileFormat fileFormat = ProjectManager.ActiveProject.preferredFileFormat;
+			string fileExtension = (from ext in fileExtensions where ext.format == fileFormat select ext.extension).FirstOrDefault();
+			string fileName = $"{handle.nameKey}{fileExtension ?? string.Empty}";
+
+			return Path.Combine(contentDirectory, fileName);
+		}
+
+		public static bool LoadContent(ContentReference contentRef, out ContentHandle outHandle)
+		{
+			outHandle = null;
+			if (contentRef == null) return false;
+
+			if (!VerifyContentReference(contentRef, out FileFormat sourceFileFormat)) return false;
 
 			// Get the content's actual data type:
 			Assembly assembly = Assembly.GetCallingAssembly();
@@ -137,6 +168,47 @@ namespace Content
 			// Output loaded content and return success:
 			outHandle = new ContentHandle(contentRef.nameKey, content);
 			return true;
+		}
+
+		public static bool SaveContent(ContentReference contentRef, ContentHandle handle)
+		{
+			if (contentRef == null || handle == null)
+			{
+				Debug.LogError("[ContentFileLoader] Error! Cannot save content to file using null content reference or handle!");
+				return false;
+			}
+			if (!VerifyContentReference(contentRef, out FileFormat fileFormat)) return false;
+
+			// Serialize and write content to whatever format:
+			bool success = false;
+			switch (fileFormat)
+			{
+				case FileFormat.Json:
+					if (ContentSerializer.SerializeJson(handle.content, out string jsonTxt))
+						success = ContentSerializer.WriteTextFile(contentRef.sourcePath, jsonTxt);
+					break;
+				case FileFormat.Xml:
+					if (ContentSerializer.SerializeXml(handle.content, out string xmlTxt))
+						success = ContentSerializer.WriteTextFile(contentRef.sourcePath, xmlTxt);
+					break;
+				case FileFormat.Csv:
+					// TODO
+					break;
+				case FileFormat.Binary:
+					if (ContentSerializer.SerializeBinary(handle.content, out byte[] contentBytes))
+						success = ContentSerializer.WriteBinaryFile(contentRef.sourcePath, contentBytes);
+					break;
+				default:
+					Debug.LogError($"[ContentFileLoader] Error! Content source file has unidentified or unknown file format '{fileFormat}'!");
+					return false;
+			}
+
+			// On a failure, print an error:
+			if (!success)
+			{
+				Debug.LogError($"[ContentFileLoader] Error! Failed to serialize and write content at path '{contentRef.sourcePath}' ({fileFormat})!");
+			}
+			return success;
 		}
 
 		#endregion

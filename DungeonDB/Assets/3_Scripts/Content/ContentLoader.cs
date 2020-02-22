@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Content.Types;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -10,11 +11,12 @@ namespace Content
 		#region Fields
 
 		private static Dictionary<string, ContentReference> contentDict = null;		// Dictionary containing all detected content in the project.
-		private static Dictionary<string, ContentHandle> contentLoadedDict = null;	// Dictionary containing 
+		private static Dictionary<string, ContentHandle> contentLoadedDict = null;  // Dictionary containing all content that has been loaded to memory.
 
 		#endregion
 		#region Properties
 
+		public static int ContentCount => contentDict != null ? contentDict.Count : 0;
 		public static int ContentLoadedCount => contentLoadedDict != null ? contentLoadedDict.Count : 0;
 
 		#endregion
@@ -111,6 +113,84 @@ namespace Content
 
 			outHandle = new ContentHandle(contentRef.nameKey, content);
 			return true;
+		}
+
+		public static ContentRefAndHandle[] GetAllContentReferences()
+		{
+			if (contentDict == null) return null;
+			if (contentLoadedDict == null) contentLoadedDict = new Dictionary<string, ContentHandle>();
+
+			ContentRefAndHandle[] crh = new ContentRefAndHandle[ContentCount];
+			ContentReference[] allReferences = contentDict.Values.ToArray();
+			for (int i = 0; i < crh.Length; ++i)
+			{
+				ContentReference reference = allReferences[i];
+				ContentHandle handle = (from h in contentLoadedDict where string.CompareOrdinal(h.Key, reference.nameKey) == 0 select h)?.FirstOrDefault().Value;
+				crh[i] = new ContentRefAndHandle(reference, handle);
+			}
+			return crh;
+		}
+
+		public static bool SaveContent(string nameKey, object content, out ContentRefAndHandle refAndHandle, ContentLoadSource saveLocation = ContentLoadSource.File)
+		{
+			refAndHandle = null;
+			if (string.IsNullOrWhiteSpace(nameKey))
+			{
+				Debug.LogError("[ContentLoader] Error! Content name may not be null, empty, or blank!");
+				return false;
+			}
+			if (content == null)
+			{
+				Debug.LogError("[ContentLoader] Error! Cannot save null content!");
+				return false;
+			}
+
+			// Check if a piece of content with this same name has been created before:
+			bool exists = contentLoadedDict.TryGetValue(nameKey, out ContentHandle handle);
+			exists |= contentDict.TryGetValue(nameKey, out ContentReference reference);
+
+			// If we're dealing with new content, create and register new reference and handle objects:
+			string sourcePath = reference?.sourcePath;
+			if (!exists)
+			{
+				reference = new ContentReference(nameKey, content.GetType(), saveLocation, sourcePath);
+				contentDict.Add(nameKey, reference);
+			}
+			if (handle == null)
+			{
+				handle = new ContentHandle(nameKey, content);
+				contentLoadedDict.Add(nameKey, handle);
+			}
+
+			// Save content to file: (this will overwrite any previous version of the content)
+			bool wasSaved = false;
+			switch (saveLocation)
+			{
+				case ContentLoadSource.File:
+					if (string.IsNullOrWhiteSpace(reference.sourcePath))
+						reference.sourcePath = ContentFileLoader.CreateSourcePath(handle);
+					wasSaved = ContentFileLoader.SaveContent(reference, handle);
+					break;
+				case ContentLoadSource.Database:
+					// TODO
+					break;
+				default:
+					break;
+			}			
+
+			// Output both content identifiers and return success:
+			refAndHandle = new ContentRefAndHandle(reference, handle);
+			return true;
+		}
+		public static bool SaveContent(ContentAccessor contentCA, out ContentRefAndHandle refAndHandle, ContentLoadSource saveLocation = ContentLoadSource.File)
+		{
+			if (contentCA == null)
+			{
+				Debug.LogError("[ContentLoader] Error! Cannot save content from null accessor!");
+				refAndHandle = null;
+				return false;
+			}
+			return SaveContent(contentCA.nameKey, contentCA.content, out refAndHandle, saveLocation);
 		}
 
 		#endregion

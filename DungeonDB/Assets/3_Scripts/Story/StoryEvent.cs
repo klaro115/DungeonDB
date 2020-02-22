@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Content;
 
 [Serializable]
-public class StoryEvent
+[ContentElement(contentType = ContentType.Story_Event, nameKeyField = "name")]
+public class StoryEvent : IContentItem
 {
 	#region Fields
 
@@ -17,10 +19,11 @@ public class StoryEvent
 	public List<string> relatedContentNames = new List<string>();
 
 	[Header("Coordinates:")]
-	public string locationName = string.Empty;
-	[NonSerialized]
-	[UiControlLevelSpec(UiControlLevel.Any, UiControlContentBinding.LoadFromDatabase, "locationName")]
-	public Location location = null;
+	[UiContentAccessorSpec(ContentType.World_Location, UiControlContentBinding.LoadFromDatabase, true)]
+	public ContentAccessor location = ContentAccessor.Empty;
+	[UiContentAccessorSpec(ContentType.Story_Line, UiControlContentBinding.LoadFromDatabase, false)]
+	public ContentAccessor storyline = ContentAccessor.Empty;
+
 	[UiControlLevelSpec(UiControlLevel.Normal)]
 	public DateTime startTime = new DateTime();
 	[UiControlLevelSpec(UiControlLevel.Normal)]
@@ -37,6 +40,20 @@ public class StoryEvent
 
 	#endregion
 	#region Methods
+
+	public void LoadAllContents()
+	{
+		if (location != null) location.TryLoadContent(out object locationObj);
+		if (storyline != null) storyline.TryLoadContent(out object storylineObj);
+
+		if (timeline != null)
+		{
+			foreach (StoryMoment moment in timeline)
+			{
+				moment.LoadAllContents();
+			}
+		}
+	}
 
 	public TimeSpan GetTimeUntil(DateTime current, StoryTimeReference referenceMoment = StoryTimeReference.StartTime)
 	{

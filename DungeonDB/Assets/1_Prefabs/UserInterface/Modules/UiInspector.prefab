@@ -124,7 +124,7 @@ MonoBehaviour:
     typeName: 
     prefab: {fileID: 2393274550914448782, guid: 9aa8513394cfc6649a633414f9ef5ec0,
       type: 3}
-  - targetTypes: 6
+  - targetTypes: 8
     controlLevel: -1
     typeName: 
     prefab: {fileID: 1275195826908419562, guid: 16ad563887f800c4796ae32e148d23d3,
@@ -134,6 +134,10 @@ MonoBehaviour:
     typeName: 
     prefab: {fileID: 1275195826908419562, guid: 16ad563887f800c4796ae32e148d23d3,
       type: 3}
+  - targetTypes: 6
+    controlLevel: -1
+    typeName: 
+    prefab: {fileID: 379335561557269941, guid: 706b5022d0841844f8676b1ad9d77ce0, type: 3}
 --- !u!1 &1507198735412678049
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,13 +1,16 @@
 ﻿using System;
 
-public interface IUiControlHost
+namespace UI
 {
-	#region Methods
+	public interface IUiControlHost
+	{
+		#region Methods
 
-	object ControlTarget { get; }
-	Type ControlTargetType { get; }
+		object ControlTarget { get; }
+		Type ControlTargetType { get; }
 
-	bool NotifyControlChanged(UiControl control);
+		bool NotifyControlChanged(UiControl control);
 
-	#endregion
+		#endregion
+	}
 }

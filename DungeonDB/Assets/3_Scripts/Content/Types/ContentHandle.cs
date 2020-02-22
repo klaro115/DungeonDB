@@ -12,6 +12,7 @@ namespace Content
 			nameKey = _nameKey?.ToLowerInvariant();
 			content = _content;
 			contentType = _content?.GetType();
+			category = ContentHelper.GetContentCategory(contentType);
 		}
 
 		#endregion
@@ -19,6 +20,7 @@ namespace Content
 
 		public string nameKey = string.Empty;
 		public object content = null;
+		public ContentType category = ContentType.Unknown;
 		public Type contentType = null;
 		//...
 

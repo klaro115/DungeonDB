@@ -21,6 +21,21 @@ namespace Content
 			source = _source;
 			sourcePath = _sourcePath;
 		}
+		public ContentReference(object content, ContentLoadSource _source, string _sourcePath)
+		{
+			Type contentType = content?.GetType();
+			if (contentType != null)
+			{
+				object[] attributes = contentType.GetCustomAttributes(typeof(ContentElementAttribute), true);
+				ContentElementAttribute contentAttr = attributes != null && attributes.Length != 0 ? attributes[0] as ContentElementAttribute : null;
+				if (contentAttr != null && contentAttr.GetNameKey(content, out nameKey))
+				{
+					contentTypeName = contentAttr.GetContentType()?.Name ?? string.Empty;
+				}
+			}
+			source = _source;
+			sourcePath = _sourcePath;
+		}
 
 		#endregion
 		#region Fields

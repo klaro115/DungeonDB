@@ -1,17 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
+using UI.Inspector;
 
-public interface IUiInspector : IUiControlHost
+namespace UI
 {
-	#region Properties
+	public interface IUiInspector : IUiControlHost, IUiHostElement
+	{
+		#region Properties
 
-	UiInspector RootHost { get; }
-	IUiInspector Host { get; }
-	RectTransform ContentParent { get; }
+		UiInspector RootHost { get; }
+		IUiInspector Host { get; }
+		RectTransform ContentParent { get; }
 
-	int ControlCount { get; }
-	UiInspectorMode InspectorMode { get; }
+		int ControlCount { get; }
+		UiInspectorMode InspectorMode { get; }
 
-	#endregion
+		#endregion
+	}
 }

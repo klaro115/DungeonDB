@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Content;
 
 [Serializable]
+[ContentElement(contentType = ContentType.World_Location, nameKeyField = "name")]
 public class Location
 {
 	#region Fields
@@ -20,20 +22,15 @@ public class Location
 	public Vector3 dimensions = Vector3.one;
 
 	[Header("Connections:")]
-	public string parentName = string.Empty;
-	[NonSerialized]
-	[UiControlLevelSpec(UiControlLevel.Any, UiControlContentBinding.LoadFromDatabase, "parentName")]
-	public Location parent = null;
-	public List<string> connectedLocationNames = new List<string>();
-	[NonSerialized]
-	[UiControlLevelSpec(UiControlLevel.DontShow)]
-	public List<Location> connectedLocations = null;
+	[UiControlDisplaySpec(displayName = "Parent Location")]
+	[UiContentAccessorSpec(ContentType.World_Location, UiControlContentBinding.LoadFromDatabase, true)]
+	public ContentAccessor parentLocation = ContentAccessor.Empty;
+	[UiContentAccessorSpec(ContentType.World_Location, UiControlContentBinding.LoadFromDatabase, false)]
+	public List<ContentAccessor> connectedLocations = new List<ContentAccessor>();
 
 	[Header("Story:")]
-	public List<string> eventNames = new List<string>();
-	[NonSerialized]
-	[UiControlLevelSpec(UiControlLevel.DontShow)]
-	public List<StoryEvent> events = null;
+	[UiContentAccessorSpec(ContentType.Story_Event, UiControlContentBinding.LoadFromDatabase, true)]
+	public List<ContentAccessor> events = new List<ContentAccessor>();
 
 	#endregion
 }

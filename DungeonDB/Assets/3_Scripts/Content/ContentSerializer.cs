@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using System.Xml.Serialization;
 using UnityEngine;
 
@@ -8,6 +9,15 @@ namespace Content
 {
 	public static class ContentSerializer
 	{
+		#region Fields
+
+		private static StringBuilder xmlBuilder = null;
+		private static BinaryFormatter formatter = null;
+
+		private const int binarySerializationBufferCapacity = 8192;
+		private static byte[] binarySerializationBuffer = new byte[binarySerializationBufferCapacity];
+
+		#endregion
 		#region Methods
 
 		/************************************************************************************************/
@@ -154,6 +164,32 @@ namespace Content
 				return false;
 			}
 		}
+		public static bool SerializeXml(object content, out string xmlTxt)
+		{
+			xmlTxt = null;
+			if (content == null) return false;
+
+			if (xmlBuilder == null) xmlBuilder = new StringBuilder();
+			else xmlBuilder.Clear();
+
+			// Try serializing object:
+			try
+			{
+				XmlSerializer serializer = new XmlSerializer(content.GetType());
+				using (StringWriter writer = new StringWriter(xmlBuilder))
+				{
+					serializer.Serialize(writer, content);
+					xmlTxt = xmlBuilder.ToString();
+					writer.Close();
+				}
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"[ContentSerializer] ERROR! An exception was met when trying to serialize type '{content.GetType()}' to JSON!\nException message: {ex.Message}");
+				return false;
+			}
+		}
 
 		public static bool DeserializeBinary(byte[] bytes, Type contentType, out object content)
 		{
@@ -164,19 +200,48 @@ namespace Content
 			if (bytes.Length == 0) return true;
 
 			// Try deserializing object:
-			BinaryFormatter formatter = new BinaryFormatter();
+			if (formatter == null) formatter = new BinaryFormatter();
 			try
 			{
 				// Create a byte stream to perform binary formatting from:
 				using (MemoryStream stream = new MemoryStream(bytes))
 				{
 					content = formatter.Deserialize(stream);
+					stream.Close();
 				}
 				return true;
 			}
 			catch (Exception ex)
 			{
 				Debug.LogError($"[ContentSerializer] ERROR! An exception was met when trying to deserialize '{contentType}' from binary data!\nException message: {ex.Message}");
+				return false;
+			}
+		}
+		public static bool SerializeBinary(object content, out byte[] bytes)
+		{
+			bytes = null;
+			if (content == null) return true;
+
+			if (binarySerializationBuffer == null)
+			{
+				binarySerializationBuffer = new byte[binarySerializationBufferCapacity];
+				for (int i = 0; i < binarySerializationBuffer.Length; ++i) binarySerializationBuffer[i] = 0x00;
+			}
+
+			if (formatter == null) formatter = new BinaryFormatter();
+			try
+			{
+				using (MemoryStream stream = new MemoryStream(binarySerializationBuffer, true))
+				{
+					formatter.Serialize(stream, content);
+					Array.Copy(binarySerializationBuffer, 0, bytes, 0, (int)stream.Length);
+					stream.Close();
+				}
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"[ContentSerializer] ERROR! An exception was met when trying to serialize '{content.GetType()}' to binary!\nException message: {ex.Message}");
 				return false;
 			}
 		}

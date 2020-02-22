@@ -1,34 +1,44 @@
 ﻿using System;
+using UI;
 
-[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-public class UiControlLevelSpec : System.Attribute
+namespace Content
 {
-	#region Constructors
-
-	public UiControlLevelSpec(UiControlLevel _levels)
+	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+	public class UiControlLevelSpec : System.Attribute
 	{
-		levels = _levels;
-		contentBinding = UiControlContentBinding.None;
-		contentBindingSourceName = null;
+		#region Constructors
+
+		public UiControlLevelSpec(UiControlLevel _levels)
+		{
+			levels = _levels;
+			contentBinding = UiControlContentBinding.None;
+			contentBindingSourceName = null;
+			bindingBehaviour = UiControlBindingBehaviour.AlwaysShow;
+		}
+		public UiControlLevelSpec(UiControlLevel _levels,
+			string _contentBindingSrcName,
+			UiControlContentBinding _contentBinding = UiControlContentBinding.LoadFromDatabase,
+			UiControlBindingBehaviour _bindingBehaviour = UiControlBindingBehaviour.HideIfNoBinding)
+		{
+			levels = _levels;
+			contentBinding = _contentBinding;
+			contentBindingSourceName = _contentBindingSrcName;
+			bindingBehaviour = _bindingBehaviour;
+		}
+
+		#endregion
+		#region Fields
+
+		public UiControlLevel levels;
+		public UiControlContentBinding contentBinding = UiControlContentBinding.None;
+		public string contentBindingSourceName = null;
+		public UiControlBindingBehaviour bindingBehaviour = UiControlBindingBehaviour.AlwaysShow;
+
+		#endregion
+		#region Properties
+
+		public UiControlSetup Setup => new UiControlSetup(levels, contentBinding, contentBinding == UiControlContentBinding.None ? null : contentBindingSourceName);
+
+		#endregion
 	}
-	public UiControlLevelSpec(UiControlLevel _levels, UiControlContentBinding _contentBinding, string _contentBindingSrcName)
-	{
-		levels = _levels;
-		contentBinding = _contentBinding;
-		contentBindingSourceName = _contentBindingSrcName;
-	}
-
-	#endregion
-	#region Fields
-
-	public UiControlLevel levels;
-	public UiControlContentBinding contentBinding = UiControlContentBinding.None;
-	public string contentBindingSourceName = null;
-
-	#endregion
-	#region Properties
-
-	public UiControlSetup Setup => new UiControlSetup(levels, contentBinding, contentBinding == UiControlContentBinding.None ? null : contentBindingSourceName);
-
-	#endregion
 }

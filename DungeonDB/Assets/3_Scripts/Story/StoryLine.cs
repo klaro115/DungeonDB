@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Content;
 
 [Serializable]
-public class StoryLine
+[ContentElement(contentType = ContentType.Story_Line, nameKeyField = "name")]
+public class StoryLine : IContentItem
 {
 	#region Fields
 
@@ -14,9 +16,8 @@ public class StoryLine
 	public List<string> relatedContentNames = new List<string>();
 
 	[Header("Coordinates:")]
-	public List<string> eventNames = new List<string>();
-	[NonSerialized]
-	public List<StoryEvent> events = null;
+	[UiControlLevelSpec(UiControlLevel.Any, bindingBehaviour = UiControlBindingBehaviour.HideIfNoBinding, contentBinding = UiControlContentBinding.LoadFromDatabase)]
+	public List<ContentAccessor> events = new List<ContentAccessor>();
 	[UiControlLevelSpec(UiControlLevel.Broad)]
 	public DateTime startTime = new DateTime();
 	[UiControlLevelSpec(UiControlLevel.Broad)]
@@ -28,10 +29,32 @@ public class StoryLine
 	public TimeSpan Duration => endTime > startTime ? endTime - startTime : TimeSpan.Zero;
 	public DateTime MiddleTime => startTime + TimeSpan.FromMilliseconds(Duration.TotalMilliseconds / 2);
 
-	public int EventCount => events != null ? events.Count : (eventNames != null ? eventNames.Count : 0);
+	public int EventCount => events != null ? events.Count : 0;
 
 	#endregion
 	#region Methods
+
+	public void LoadAllContents()
+	{
+		if (events != null)
+		{
+			foreach (ContentAccessor eventCA in events)
+			{
+				eventCA.TryLoadContent(out object eventObj);
+			}
+		}
+	}
+	public bool GetEvent(int index, out StoryEvent outEvent)
+	{
+		outEvent = null;
+		if (events == null || index < 0 || index >= events.Count) return false;
+
+		ContentAccessor eventCA = events[index];
+		if (!eventCA.TryLoadContent(out object eventObj)) return false;
+
+		outEvent = eventObj as StoryEvent;
+		return true;
+	}
 
 	public void DelayEvent(TimeSpan delay)
 	{
@@ -39,24 +62,22 @@ public class StoryLine
 		endTime += delay;
 		if (events != null)
 		{
-			foreach (StoryEvent se in events)
+			for (int i = 0; i < events.Count; ++i)
 			{
-				se.DelayEvent(delay);
+				if (GetEvent(i, out StoryEvent se) && se != null) se.DelayEvent(delay);
 			}
 		}
 	}
 
 	public DateTime MatchStartTimeToEvents()
 	{
-		if (events == null || events.Count == 0) return startTime;
-		StoryEvent se = events[0];
+		if (!GetEvent(0, out StoryEvent se)) return startTime;
 		if (se != null) startTime = se.startTime;
 		return startTime;
 	}
 	public DateTime MatchEndTimeToEvents()
 	{
-		if (events == null || events.Count == 0) return endTime;
-		StoryEvent se = events[events.Count - 1];
+		if (!GetEvent(0, out StoryEvent se)) return endTime;
 		if (se != null) endTime = se.endTime;
 		return endTime;
 	}
@@ -66,17 +87,23 @@ public class StoryLine
 		outEvent = null;
 		if (eventName == null || events == null) return false;
 
-		outEvent = events.Find(o => string.Compare(eventName, o.name, StringComparison.InvariantCultureIgnoreCase) == 0);
-		return outEvent != null;
+		ContentAccessor eventCA = events.Find(o => string.Compare(eventName, o.nameKey, StringComparison.InvariantCultureIgnoreCase) == 0);
+		if (eventCA != null && eventCA.TryLoadContent(out object eventObj))
+		{
+			outEvent = eventObj as StoryEvent;
+			return true;
+		}
+		return false;
 	}
 	public bool FindEventMoment(string momentName, out StoryMoment outMoment)
 	{
 		outMoment = null;
 		if (momentName == null || events == null) return false;
 
-		foreach (StoryEvent se in events)
+		LoadAllContents();
+		foreach (ContentAccessor eventCA in events)
 		{
-			if (se.FindMoment(momentName, out outMoment)) return true;
+			if (eventCA.content != null && eventCA.content is StoryEvent se && se.FindMoment(momentName, out outMoment)) return true;
 		}
 		return false;
 	}

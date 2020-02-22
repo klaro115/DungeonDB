@@ -1,18 +1,24 @@
 ﻿using System;
 
-public enum TargetTypes
+namespace UI
 {
-	// Custom types, using custom controls:
-	Custom,
+	public enum TargetTypes
+	{
+		// Custom types, using custom controls:
+		Custom,
 
-	// Known value types:
-	Scalar,
-	Text,
-	Vectors,
-	Color,
-	DateTime,
+		// Known value types:
+		Scalar,
+		Text,
+		Vectors,
+		Color,
+		DateTime,
 
-	// Sub-Inspector types:
-	IList,
-	NestedObject,
+		// Content accessors:
+		ContentAccessor,
+
+		// Sub-Inspector types:
+		IList,
+		NestedObject,
+	}
 }
